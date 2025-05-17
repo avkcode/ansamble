@@ -1,5 +1,9 @@
 ### Ansible without/without Temporal
 
+### Simple workflow
+
+[![Simple](https://e.radikal.host/2025/05/17/Screenshot-2025-05-17-at-07.41.15.png)](https://radikal.host/i/Ir0JQe)
+
 #### 1. Long-Running Workflows with Checkpointing
 
 Problem: Ansible playbooks fail on long-running tasks (e.g., cloud provisioning, multi-hour deployments).
@@ -118,6 +122,60 @@ async def deploy_full_stack():
     await run_terraform("apply")
     await run_kubectl("apply -f k8s/")
     await run_ansible_playbook("configure_ingress.yml")
+```
+
+## Dynamic Ansible inventory
+
+Here’s how to create a dynamic Ansible inventory using a Temporal workflow that fetches host data from a CMDB via REST API, ensuring real-time, fault-tolerant infrastructure management:
+```
+Temporal Workflow → Fetches CMDB Data (REST API) → Generates Dynamic Inventory → Runs Ansible
+```
+
+```python
+#!/usr/bin/env python3
+import requests
+import json
+import argparse
+
+def fetch_cmdb_hosts(cmdb_api_url: str, token: str) -> dict:
+    headers = {"Authorization": f"Bearer {token}"}
+    response = requests.get(f"{cmdb_api_url}/hosts", headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+def generate_inventory(cmdb_data: dict) -> dict:
+    inventory = {
+        "_meta": {"hostvars": {}},
+        "all": {"hosts": []},
+        "web": {"hosts": []},
+        "db": {"hosts": []}
+    }
+    
+    for host in cmdb_data["hosts"]:
+        inventory["all"]["hosts"].append(host["name"])
+        inventory["_meta"]["hostvars"][host["name"]] = {
+            "ansible_host": host["ip"],
+            "ansible_user": host["user"],
+            "ansible_become": True
+        }
+        if host["role"] == "web":
+            inventory["web"]["hosts"].append(host["name"])
+        elif host["role"] == "db":
+            inventory["db"]["hosts"].append(host["name"])
+    
+    return inventory
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--list", action="store_true", help="List all hosts")
+    args = parser.parse_args()
+    
+    if args.list:
+        cmdb_data = fetch_cmdb_hosts(
+            cmdb_api_url="https://cmdb.example.com/api",
+            token="your-api-token"
+        )
+        print(json.dumps(generate_inventory(cmdb_data)))
 ```
 
 ---
