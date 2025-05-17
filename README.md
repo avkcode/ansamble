@@ -1,21 +1,20 @@
 # Tabel of contents
 
 [Preface](#preface)
-[Ansible without/with Temporal](#ansible-without/without-temporal)
+[Ansible without/with Temporal](#ansible-with-temporal)
 [Simple Workflow](#simple-workflow)
-[Long-Running Workflows with Checkpointing]()
-[Dynamic Parallel Execution]()
-[Human-in-the-Loop Approvals]()
-[Cross-Cloud Orchestration]()
+[Long-Running Workflows with Checkpointing](#long-running-workflows-with-checkpointing)
+[Dynamic Parallel Execution](#dynamic-parallel-execution)
+[Human-in-the-Loop Approvals](#human-in-the-loop-approvals)
+[Cross-Cloud Orchestration](#cross-cloud-orchestration)
 [Event-Driven Ansible (EDA) on Steroids]()
 [Stateful Workflows with Recovery]()
 [Time Travel Debugging]()
 [Cross-Tool Chaining]()
 [Dynamic Ansible Inventory]()
 [GitLab Integration]()
-[Main Use Cases]()
-[Terraform]()
-[Database Migrations]()
+[Terraform](#terraform)
+[Database Migrations](#database-migrations)
 
 
 
@@ -32,7 +31,7 @@ Another advantage is how Temporal handles long-running processes common in Day 2
 In short, Temporal helps IT teams move faster and more efficiently without sacrificing control or governance, which is exactly what modern enterprises need in today’s fast-changing hybrid cloud world.
 
 
-### Ansible without/without Temporal
+### Ansible with Temporal
 
 Temporal addresses challenges in automating workflows by providing a robust framework for managing complex, long-running processes that require reliability, scalability, and fault tolerance. Without Temporal, running Ansible playbooks or similar automation tasks can face issues like failed executions due to transient errors, lack of visibility into ongoing processes, inability to resume workflows after system crashes, and difficulty in coordinating multiple dependent tasks. Temporal ensures that workflows can recover gracefully from failures, maintain state across retries, and allow dynamic adjustments based on runtime conditions. It also enables seamless integration of different tools and systems within a single workflow, making it easier to orchestrate multi-step operations that involve not just Ansible but potentially other infrastructure or application management tools. By handling the complexities of task coordination, retries, and state management, Temporal allows developers to focus on defining the logic of their workflows rather than worrying about the underlying execution mechanics.
 
@@ -545,18 +544,6 @@ sequenceDiagram
     Ansible-->>Temporal: Playbook completed
     Temporal-->>WebhookHandler: Workflow completed
     WebhookHandler-->>GitLab: Acknowledge webhook
-```
-
-#### Main use cases
-
-```mermaid
-graph TD
-    A[Use Cases] --> B[Multi-Cloud Deployments]
-    A --> C[Mission-Critical Workflows]
-    A --> D[Self-Healing Infrastructure]
-    B --> E[AWS + Azure + GCP]
-    C --> F[Banking Migrations]
-    D --> G[Auto-Remediation]
 ```
 
 ---
