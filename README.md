@@ -1,4 +1,57 @@
+### Temporal
+
+[Temporal](https://temporal.io) is a distributed workflow orchestration platform that enables developers to build, run, and scale reliable, long-running workflows with fault tolerance, retries, and state management. It ensures workflows persist through failures and provides tools for monitoring, debugging, and replaying executions.
+
+### Ansible
+
+Ansible is an open-source automation tool used for configuring systems, deploying software, and orchestrating IT tasks. It uses YAML-based playbooks to define tasks and operates over SSH, requiring no agents on target systems. Ansible simplifies infrastructure management by automating repetitive tasks like server provisioning, application deployment, and configuration updates.
+
+
 ### Ansible without/without Temporal
+
+Temporal addresses challenges in automating workflows by providing a robust framework for managing complex, long-running processes that require reliability, scalability, and fault tolerance. Without Temporal, running Ansible playbooks or similar automation tasks can face issues like failed executions due to transient errors, lack of visibility into ongoing processes, inability to resume workflows after system crashes, and difficulty in coordinating multiple dependent tasks. Temporal ensures that workflows can recover gracefully from failures, maintain state across retries, and allow dynamic adjustments based on runtime conditions. It also enables seamless integration of different tools and systems within a single workflow, making it easier to orchestrate multi-step operations that involve not just Ansible but potentially other infrastructure or application management tools. By handling the complexities of task coordination, retries, and state management, Temporal allows developers to focus on defining the logic of their workflows rather than worrying about the underlying execution mechanics.
+
+```mermaid
+graph TD
+    %% Custom Styling
+    classDef temporal fill:#4CAF50,stroke:#333,stroke-width:2px,color:#fff;
+    classDef ansible fill:#FF9800,stroke:#333,stroke-width:2px,color:#fff;
+    classDef problem fill:#F44336,stroke:#333,stroke-width:2px,color:#fff;
+    classDef solution fill:#2196F3,stroke:#333,stroke-width:2px,color:#fff;
+
+    %% Nodes
+    A[Challenges Without Temporal]:::problem --> B["Failed Executions<br>(Transient Errors)"];
+    A --> C["Lack of Visibility<br>(No Monitoring)"];
+    A --> D["Inability to Resume<br>(Crash Recovery)"];
+    A --> E["Coordination Issues<br>(Dependent Tasks)"];
+
+    F[Temporal Framework]:::temporal --> G["Retry Mechanisms<br>(Fault Tolerance)"];
+    F --> H["State Management<br>(Persist State Across Failures)"];
+    F --> I["Dynamic Adjustments<br>(Runtime Conditions)"];
+    F --> J["Multi-Tool Integration<br>(Ansible + Others)"];
+
+    K[Benefits of Temporal]:::solution --> L["Graceful Recovery<br>(From Failures)"];
+    K --> M["Maintain State<br>(Across Retries)"];
+    K --> N["Orchestrate Multi-Step<br>(Complex Operations)"];
+    K --> O["Focus on Logic<br>(Not Execution Mechanics)"];
+
+    %% Flow
+    B -->|Solved By| F
+    C -->|Solved By| F
+    D -->|Solved By| F
+    E -->|Solved By| F
+
+    F -->|Enables| K
+
+    %% Subgraph for Grouping Temporal Features
+    subgraph TemporalFeatures
+        direction TB
+        G[Retry Mechanisms]
+        H[State Management]
+        I[Dynamic Adjustments]
+        J[Multi-Tool Integration]
+    end
+```
 
 ### Simple workflow
 
