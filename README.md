@@ -386,4 +386,121 @@ graph TD
 
 Using Terraform and Temporal together offers a powerful combination for infrastructure automation, addressing gaps that arise when using either tool in isolation. Terraform excels at declarative infrastructure provisioning but requires custom providers for new or niche services, which can be time-consuming to develop and maintain. On the other hand, Temporal provides a robust orchestration layer for automating workflows, including those involving APIs, without the need for custom providers. For example, you can use Temporal to seamlessly automate interactions with services like Equinix Metal, GoDaddy, or VMware via their REST APIs, orchestrating complex, stateful workflows that Terraform alone cannot handle. While Terraform focuses on defining and managing infrastructure as code, Temporal complements it by enabling dynamic, fault-tolerant, and long-running operations, such as retries, approvals, and cross-service coordination. Together, they allow teams to leverage Terraform's strength in infrastructure provisioning while relying on Temporal for workflow automation, creating a more flexible and scalable solution than using either tool alone.
 
-[![Terraform](https://e.radikal.host/2025/05/17/schema.png)](https://radikal.host/i/IGzdeE)
+An example of a GitLab pipeline (.gitlab-ci.yml) that integrates with the Temporal workflow to deploy a VMware virtual machine using Terraform. This pipeline assumes you have already set up the Temporal server and worker, and it uses the Python-based Temporal workflow provided earlier.
+
+
+```yaml
+stages:
+  - setup
+  - terraform-init
+  - terraform-plan
+  - terraform-apply
+  - temporal-workflow
+
+variables:
+  TERRAFORM_DIR: "terraform"
+  TEMPORAL_TASK_QUEUE: "vmware-task-queue"
+
+setup-dependencies:
+  stage: setup
+  image: python:3.9
+  script:
+    - apt-get update && apt-get install -y terraform
+    - pip install temporalio requests
+  artifacts:
+    paths:
+      - $TERRAFORM_DIR
+
+terraform-init:
+  stage: terraform-init
+  image: hashicorp/terraform:latest
+  script:
+    - cd $TERRAFORM_DIR
+    - terraform init
+  artifacts:
+    paths:
+      - $TERRAFORM_DIR/.terraform
+
+terraform-plan:
+  stage: terraform-plan
+  image: hashicorp/terraform:latest
+  script:
+    - cd $TERRAFORM_DIR
+    - terraform plan -out=tfplan
+  dependencies:
+    - terraform-init
+  artifacts:
+    paths:
+      - $TERRAFORM_DIR/tfplan
+
+terraform-apply:
+  stage: terraform-apply
+  image: hashicorp/terraform:latest
+  script:
+    - cd $TERRAFORM_DIR
+    - terraform apply -auto-approve tfplan
+  dependencies:
+    - terraform-plan
+
+temporal-workflow:
+  stage: temporal-workflow
+  image: python:3.9
+  script:
+    - apt-get update && apt-get install -y git
+    - pip install temporalio requests
+    - git clone https://github.com/your-repo/temporal-vmware-workflow.git 
+    - cd temporal-vmware-workflow
+    - python run_workflow.py --task-queue $TEMPORAL_TASK_QUEUE --terraform-dir $TERRAFORM_DIR
+  dependencies:
+    - terraform-apply
+```
+
+```python
+import os
+import subprocess
+import temporalio.workflow
+from temporalio import activity
+from typing import List
+
+@activity.defn
+async def run_terraform_init(working_dir: str) -> str:
+    result = subprocess.run(["terraform", "init"], cwd=working_dir, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise Exception(f"Terraform init failed: {result.stderr}")
+    return result.stdout
+
+@activity.defn
+async def run_terraform_plan(working_dir: str) -> str:
+    result = subprocess.run(["terraform", "plan", "-out=tfplan"], cwd=working_dir, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise Exception(f"Terraform plan failed: {result.stderr}")
+    return result.stdout
+
+@activity.defn
+async def run_terraform_apply(working_dir: str) -> str:
+    result = subprocess.run(["terraform", "apply", "-auto-approve", "tfplan"], cwd=working_dir, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise Exception(f"Terraform apply failed: {result.stderr}")
+    return result.stdout
+
+@temporalio.workflow.defn
+class VMwareDeploymentWorkflow:
+    @temporalio.workflow.run
+    async def run(self, terraform_dir: str):
+        await temporalio.workflow.execute_activity(
+            run_terraform_init,
+            terraform_dir,
+            start_to_close_timeout=timedelta(minutes=5)
+        )
+        await temporalio.workflow.execute_activity(
+            run_terraform_plan,
+            terraform_dir,
+            start_to_close_timeout=timedelta(minutes=5)
+        )
+        apply_output = await temporalio.workflow.execute_activity(
+            run_terraform_apply,
+            terraform_dir,
+            start_to_close_timeout=timedelta(minutes=10)
+        )
+        return {"status": "VMware VM deployment complete", "output": apply_output}
+```
