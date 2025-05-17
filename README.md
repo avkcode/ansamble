@@ -59,9 +59,185 @@ graph TD
 
 ### Simple workflow
 
+This Python script shows how to use Temporal to run an Ansible playbook, like one that updates system packages on a server. It sets up a workflow and activity to execute the playbook in a reliable way, with features like retries, live output streaming, and clean shutdowns.
+
+The execute_ansible_playbook activity runs the ansible-playbook command using asyncio to capture and display the output as it happens. You can pass the playbook file and, optionally, an inventory file. If something goes wrong and the playbook fails, the script raises an error, and Temporal automatically retries the operation up to three times before stopping.
+
+The AnsibleWorkflow defines the workflow logic, which basically calls the activity to run the playbook. It’s set up with timeouts and retry policies to handle cases where the playbook takes a long time or runs into temporary issues.
+
+When you run the script, it connects to a Temporal server, starts a worker to listen for tasks, and immediately kicks off the workflow to run the playbook you specify. For example, you could point it to a playbook like update_packages.yml, which might use Ansible modules like apt or yum to update packages on your servers. The script ensures the playbook runs smoothly, streams its output in real-time, and handles interruptions or errors without losing track of what’s happening.
+
+This approach is great for automating tasks like updating packages across servers, where reliability and visibility are key. By using Temporal, you get built-in retries, fault tolerance, and the ability to monitor and debug the process easily if something doesn’t go as planned.
+
+```python
+import asyncio
+import uuid
+import sys
+import os
+import signal
+import argparse
+from datetime import timedelta
+from temporalio import workflow, activity
+from temporalio.client import Client
+from temporalio.worker import Worker
+from temporalio.common import RetryPolicy
+
+# --- Activity Definition ---
+@activity.defn
+async def execute_ansible_playbook(playbook_path: str, inventory_path: str = None) -> str:
+    """Execute ansible-playbook with live output."""
+    cmd = ["ansible-playbook", playbook_path]
+    if inventory_path:
+        cmd.extend(["-i", inventory_path])
+
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+
+    output = []
+    while True:
+        stdout_chunk = await proc.stdout.read(1024)
+        stderr_chunk = await proc.stderr.read(1024)
+
+        if not stdout_chunk and not stderr_chunk:
+            break
+
+        if stdout_chunk:
+            sys.stdout.write(stdout_chunk.decode())
+            sys.stdout.flush()
+            output.append(stdout_chunk.decode())
+
+        if stderr_chunk:
+            sys.stderr.write(stderr_chunk.decode())
+            sys.stderr.flush()
+            output.append(f"ERROR: {stderr_chunk.decode()}")
+
+    exit_code = await proc.wait()
+    if exit_code != 0:
+        raise RuntimeError(f"Playbook failed with exit code {exit_code}")
+
+    return "".join(output)
+
+# --- Workflow Definition ---
+@workflow.defn
+class AnsibleWorkflow:
+    @workflow.run
+    async def run(self, params: dict) -> str:
+        return await workflow.execute_activity(
+            execute_ansible_playbook,
+            args=[params["playbook_path"], params.get("inventory_path")],
+            start_to_close_timeout=timedelta(minutes=15),
+            retry_policy=RetryPolicy(
+                initial_interval=timedelta(seconds=30),
+                maximum_interval=timedelta(minutes=2),
+                maximum_attempts=3
+            )
+        )
+
+async def run_workflow_and_worker(playbook_path: str, inventory_path: str = None):
+    """Start worker and execute workflow automatically"""
+    shutdown_event = asyncio.Event()
+    client = None
+    worker = None
+
+    def signal_handler():
+        shutdown_event.set()
+
+    loop = asyncio.get_running_loop()
+    loop.add_signal_handler(signal.SIGINT, signal_handler)
+    loop.add_signal_handler(signal.SIGTERM, signal_handler)
+
+    try:
+        # Connect to Temporal
+        client = await Client.connect("localhost:7233")
+
+        # Start worker
+        worker = Worker(
+            client,
+            task_queue="ansible-queue",
+            workflows=[AnsibleWorkflow],
+            activities=[execute_ansible_playbook],
+            graceful_shutdown_timeout=timedelta(seconds=5)
+        )
+
+        # Run worker in background
+        worker_task = asyncio.create_task(worker.run())
+
+        # Execute workflow
+        print(f"Executing playbook: {playbook_path}")
+        result = await client.execute_workflow(
+            AnsibleWorkflow.run,
+            args=[{"playbook_path": playbook_path, "inventory_path": inventory_path}],
+            id=f"ansible-{uuid.uuid4()}",
+            task_queue="ansible-queue",
+            execution_timeout=timedelta(minutes=20)
+        )
+
+        print("\nPlaybook execution result:")
+        print(result)
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        raise
+    finally:
+        # Clean shutdown
+        shutdown_event.set()
+        if worker:
+            await worker.shutdown()
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--playbook", required=True, help="Path to playbook file")
+    parser.add_argument("--inventory", help="Path to inventory file")
+    args = parser.parse_args()
+
+    # Validate paths
+    if not os.path.exists(args.playbook):
+        print(f"Error: Playbook not found at {args.playbook}")
+        sys.exit(1)
+    if args.inventory and not os.path.exists(args.inventory):
+        print(f"Error: Inventory file not found at {args.inventory}")
+        sys.exit(1)
+
+    try:
+        asyncio.run(run_workflow_and_worker(args.playbook, args.inventory))
+    except KeyboardInterrupt:
+        print("\nProcess stopped by user")
+        sys.exit(0)
+    except Exception as e:
+        print(f"\nError: {str(e)}")
+        sys.exit(1)
+```
+
+This command lists all workflows of type AnsibleWorkflow that are currently tracked by Temporal:
+```
+tctl workflow list --query "WorkflowType='AnsibleWorkflow'"
+```
+
+This command starts a new instance of the AnsibleWorkflow to execute the apt_update.yml playbook:
+```
+tctl workflow run \
+    --taskqueue ansible-queue \
+    --workflow_type AnsibleWorkflow \
+    --input '"apt_update.yml"'
+```
+
+`--inventory` is optional in this case.
+
+This command retrieves detailed information about a specific workflow instance identified by its workflow:
+```
+tctl workflow show -w ansible-1dcbe2e1-8b10-4616-8e11-948cb81d83b1
+```
+Temporal UI simplifies workflow management by providing an intuitive interface to check statuses, inspect details, and take actions like canceling workflows when necessary.
+[![Temporal](https://e.radikal.host/2025/05/17/Screenshot-2025-05-17-at-07.52.56.png)](https://radikal.host/i/Ir0Q5K)
+
 [![GitLab](https://e.radikal.host/2025/05/17/Screenshot-2025-05-17-at-13.26.31.png)](https://radikal.host/i/IGWUQg)
 
-[![Temporal](https://e.radikal.host/2025/05/17/Screenshot-2025-05-17-at-07.52.56.png)](https://radikal.host/i/Ir0Q5K)
+This GitLab pipeline job, ansible_workflows, automates the execution of an Ansible playbook like apt_update.yml to update system packages. It runs in the deploy stage using a shell executor and triggers a Python script (ansible.py) that orchestrates the playbook via Temporal.
+
+The script uses Temporal to run the playbook reliably, with features like retries and live output streaming. If the playbook fails, the pipeline reflects the error for easy debugging. This setup integrates infrastructure updates into your CI/CD process, ensuring reliable and automated deployments.
 
 ```yaml
 ansible_workflows:
