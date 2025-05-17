@@ -1,3 +1,5 @@
+### Ansible without/without Temporal
+
 #### 1. Long-Running Workflows with Checkpointing
 
 Problem: Ansible playbooks fail on long-running tasks (e.g., cloud provisioning, multi-hour deployments).
