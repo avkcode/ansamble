@@ -15,8 +15,7 @@
 - [GitLab Integration]()
 - [Terraform](#terraform)
 - [Database Migrations](#database-migrations)
-
-
+- [Self-Service Developer Onboarding with Temporal](Self-service-developer-onboarding-with-temporal)
 
 ## Preface
 
@@ -778,5 +777,42 @@ func main() {
     if err != nil {
         log.Fatalf("Worker failed: %v", err)
     }
+}
+```
+
+### Self-Service Developer Onboarding with Temporal
+
+Providing secure self-service infrastructure for developers in large organizations is challenging. Traditional approaches often require building custom tooling or maintaining complex Terraform providers for each service.
+
+A simpler alternative is to orchestrate existing REST APIs (Keycloak, Vault, etc.) through Temporal workflows. This approach:
+
+Eliminates the need for custom Terraform providers or internal tools
+Leverages native APIs from target systems like Vault for namespace and AppRole management
+Maintains security through built-in approval workflows and audit trails
+Scales across teams without creating technical debt from fragmented solutions
+Temporal handles the orchestration, retries, and state management, while interacting directly with each system's API. This reduces maintenance overhead compared to managing multiple Terraform providers or custom services.
+
+```go
+// Create Vault namespace activity
+func (a *Activities) CreateNamespace(ctx context.Context, teamName string) (string, error) {
+	logger := activity.GetLogger(ctx)
+	
+	// Create namespace admin client
+	adminClient, err := a.VaultClient.Clone()
+	if err != nil {
+		return "", temporal.NewApplicationError("failed to clone vault client", "VaultError", err)
+	}
+
+	// Create namespace
+	_, err = adminClient.Logical().Write(
+		fmt.Sprintf("sys/namespaces/%s", teamName),
+		nil,
+	)
+	if err != nil {
+		return "", temporal.NewApplicationError("namespace creation failed", "VaultError", err)
+	}
+
+	logger.Info("Created Vault namespace", "team", teamName)
+	return teamName, nil
 }
 ```
