@@ -374,13 +374,6 @@ graph TD
     D --> G[Auto-Remediation]
 ```
 
-
----
-
-- Complex multi-cloud deployments
-- Mission-critical workflows (e.g., banking migrations)
-- Self-healing infra (e.g., auto-remediation)
-
 ---
 ### Terraform
 
@@ -454,6 +447,10 @@ temporal-workflow:
   dependencies:
     - terraform-apply
 ```
+
+The Temporal-based workflow for deploying VMware VMs with Terraform is far more flexible than traditional Terraform setups. Unlike plain Terraform, which is limited to provisioning resources, Temporal acts as an orchestration layer that can easily integrate external systems like monitoring tools, CMDBs, and other services. For example, after Terraform provisions a VM, the workflow can automatically update a CMDB, trigger health checks in a monitoring system, or send notifications to stakeholders.
+
+Temporal also handles retries and failures gracefully, ensuring the workflow continues even if a step like a CMDB update fails. It supports dynamic decision-making, such as querying a monitoring system to decide whether to proceed, and can pause for human approval when needed. This makes it ideal for complex, real-world scenarios where infrastructure deployment doesn’t stop at provisioning—it involves integrating with multiple tools and processes seamlessly.
 
 ```python
 import os
