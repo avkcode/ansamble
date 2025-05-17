@@ -15,7 +15,7 @@
 - [GitLab Integration]()
 - [Terraform](#terraform)
 - [Database Migrations](#database-migrations)
-- [Self-Service Developer Onboarding with Temporal](Self-service-developer-onboarding-with-temporal)
+- [Self-Service Developer Onboarding with Temporal](self-service-developer-onboarding-with-temporal)
 
 ## Preface
 
