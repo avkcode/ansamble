@@ -292,11 +292,6 @@ Temporal Workflow → Fetches CMDB Data (REST API) → Generates Dynamic Invento
 ```
 
 ```python
-#!/usr/bin/env python3
-import requests
-import json
-import argparse
-
 def fetch_cmdb_hosts(cmdb_api_url: str, token: str) -> dict:
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(f"{cmdb_api_url}/hosts", headers=headers)
@@ -324,18 +319,6 @@ def generate_inventory(cmdb_data: dict) -> dict:
             inventory["db"]["hosts"].append(host["name"])
     
     return inventory
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--list", action="store_true", help="List all hosts")
-    args = parser.parse_args()
-    
-    if args.list:
-        cmdb_data = fetch_cmdb_hosts(
-            cmdb_api_url="https://cmdb.example.com/api",
-            token="your-api-token"
-        )
-        print(json.dumps(generate_inventory(cmdb_data)))
 ```
 
 ```mermaid
