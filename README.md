@@ -457,51 +457,28 @@ The Temporal-based workflow for deploying VMware VMs with Terraform is far more 
 Temporal also handles retries and failures gracefully, ensuring the workflow continues even if a step like a CMDB update fails. It supports dynamic decision-making, such as querying a monitoring system to decide whether to proceed, and can pause for human approval when needed. This makes it ideal for complex, real-world scenarios where infrastructure deployment doesn’t stop at provisioning—it involves integrating with multiple tools and processes seamlessly.
 
 ```python
-import os
-import subprocess
-import temporalio.workflow
-from temporalio import activity
-from typing import List
-
 @activity.defn
 async def run_terraform_init(working_dir: str) -> str:
     result = subprocess.run(["terraform", "init"], cwd=working_dir, capture_output=True, text=True)
     if result.returncode != 0:
         raise Exception(f"Terraform init failed: {result.stderr}")
     return result.stdout
-
-@activity.defn
-async def run_terraform_plan(working_dir: str) -> str:
-    result = subprocess.run(["terraform", "plan", "-out=tfplan"], cwd=working_dir, capture_output=True, text=True)
-    if result.returncode != 0:
-        raise Exception(f"Terraform plan failed: {result.stderr}")
-    return result.stdout
-
+...
 @activity.defn
 async def run_terraform_apply(working_dir: str) -> str:
     result = subprocess.run(["terraform", "apply", "-auto-approve", "tfplan"], cwd=working_dir, capture_output=True, text=True)
     if result.returncode != 0:
         raise Exception(f"Terraform apply failed: {result.stderr}")
     return result.stdout
-
-@temporalio.workflow.defn
-class VMwareDeploymentWorkflow:
-    @temporalio.workflow.run
-    async def run(self, terraform_dir: str):
-        await temporalio.workflow.execute_activity(
-            run_terraform_init,
-            terraform_dir,
-            start_to_close_timeout=timedelta(minutes=5)
-        )
-        await temporalio.workflow.execute_activity(
-            run_terraform_plan,
-            terraform_dir,
-            start_to_close_timeout=timedelta(minutes=5)
-        )
-        apply_output = await temporalio.workflow.execute_activity(
-            run_terraform_apply,
-            terraform_dir,
-            start_to_close_timeout=timedelta(minutes=10)
-        )
-        return {"status": "VMware VM deployment complete", "output": apply_output}
+...
 ```
+### Database migrations
+
+Large database migrations, especially for production systems with 500GB or more of data, can be incredibly complex and risky. Tools like Liquibase are great for managing schema changes and versioning, but when it comes to executing these migrations reliably—particularly in distributed or hybrid environments—they often fall short on their own. This is where Temporal shines.
+
+Temporal adds a layer of orchestration that ensures migrations run smoothly, even for massive databases. For example, migrating a 500GB+ production database might involve steps like backing up data, applying schema changes, validating the migration, and rolling back if something goes wrong. Temporal coordinates these steps, retries failed tasks automatically, and keeps track of progress to avoid starting over if the process is interrupted.
+
+It’s also perfect for handling long-running operations that can take hours or even days. If a migration hits an issue—a network outage or a spike in database load—Temporal can pause the workflow and resume once conditions improve. And because real-world migrations often require human oversight, Temporal can pause for approvals before making critical changes, like altering a schema in production, and then proceed once the green light is given.
+
+By integrating with monitoring tools, backup systems, and other external services, Temporal ensures everything stays in sync throughout the migration. Whether you’re moving terabytes of data across regions or applying delicate schema updates to a live system, Temporal bridges the gap between Liquibase’s capabilities and the operational complexity of modern database management.
+
