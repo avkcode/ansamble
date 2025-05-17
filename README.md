@@ -651,66 +651,6 @@ By integrating with monitoring tools, backup systems, and other external service
 
 Below is a single Go file that implements the Temporal workflow for orchestrating a database schema migration using Liquibase.
 ```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "log"
-    "os/exec"
-
-    "go.temporal.io/sdk/activity"
-    "go.temporal.io/sdk/client"
-    "go.temporal.io/sdk/worker"
-    "go.temporal.io/sdk/workflow"
-)
-
-// Workflow Input Struct
-type MigrationInputs struct {
-    DatabaseURL     string // Connection URL for the database
-    ChangelogFile   string // Path to the Liquibase changelog file
-    BackupRequired  bool   // Whether a backup is needed before migration
-}
-
-// Workflow Definition
-func DatabaseMigrationWorkflow(ctx workflow.Context, inputs MigrationInputs) error {
-    logger := workflow.GetLogger(ctx)
-
-    if inputs.BackupRequired {
-        logger.Info("Starting database backup...")
-        backupActivity := workflow.ExecuteActivity(ctx, BackupDatabase, inputs.DatabaseURL)
-        if err := backupActivity.Get(ctx, nil); err != nil {
-            return fmt.Errorf("database backup failed: %w", err)
-        }
-        logger.Info("Database backup completed successfully.")
-    }
-
-    logger.Info("Starting Liquibase schema migration...")
-    updateActivity := workflow.ExecuteActivity(ctx, RunLiquibaseUpdate, LiquibaseInput{
-        DatabaseURL:   inputs.DatabaseURL,
-        ChangelogFile: inputs.ChangelogFile,
-    })
-    if err := updateActivity.Get(ctx, nil); err != nil {
-        return fmt.Errorf("liquibase update failed: %w", err)
-    }
-    logger.Info("Liquibase schema migration completed successfully.")
-
-    logger.Info("Validating the migration...")
-    validateActivity := workflow.ExecuteActivity(ctx, ValidateMigration, inputs.DatabaseURL)
-    if err := validateActivity.Get(ctx, nil); err != nil {
-        return fmt.Errorf("migration validation failed: %w", err)
-    }
-    logger.Info("Migration validation completed successfully.")
-
-    logger.Info("Notifying the team...")
-    notifyActivity := workflow.ExecuteActivity(ctx, NotifyTeam, "Database migration completed successfully.")
-    if err := notifyActivity.Get(ctx, nil); err != nil {
-        logger.Warn("Failed to send notification, but migration was successful.", "Error", err)
-    }
-
-    return nil
-}
-
 // Activity: Backup the database
 func BackupDatabase(ctx context.Context, databaseURL string) error {
     cmd := exec.CommandContext(ctx, "pg_dump", "-Fc", "-f", "/backups/db_backup.dump", databaseURL)
@@ -742,41 +682,6 @@ func ValidateMigration(ctx context.Context, databaseURL string) error {
         return fmt.Errorf("validation query failed: %w", err)
     }
     return nil
-}
-
-// Activity: Notify the team
-func NotifyTeam(ctx context.Context, message string) error {
-    // Example: Send a notification via Slack or email
-    fmt.Println("Notification:", message)
-    return nil
-}
-
-// Worker Setup
-func main() {
-    // Create Temporal client
-    temporalClient, err := client.Dial(client.Options{})
-    if err != nil {
-        log.Fatalf("Unable to create Temporal client: %v", err)
-    }
-    defer temporalClient.Close()
-
-    // Create a worker
-    taskQueue := "database-migration-task-queue"
-    w := worker.New(temporalClient, taskQueue, worker.Options{})
-
-    // Register the workflow and activities
-    w.RegisterWorkflow(DatabaseMigrationWorkflow)
-    w.RegisterActivity(BackupDatabase)
-    w.RegisterActivity(RunLiquibaseUpdate)
-    w.RegisterActivity(ValidateMigration)
-    w.RegisterActivity(NotifyTeam)
-
-    // Start the worker
-    log.Println("Starting worker...")
-    err = w.Run(worker.InterruptCh())
-    if err != nil {
-        log.Fatalf("Worker failed: %v", err)
-    }
 }
 ```
 
