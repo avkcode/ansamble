@@ -15,7 +15,7 @@ ansible_workflows:
     - python3 ansible.py --playbook apt_update.yml
 ```
 
-#### 1. Long-Running Workflows with Checkpointing
+#### Long-Running Workflows with Checkpointing
 
 Problem: Ansible playbooks fail on long-running tasks (e.g., cloud provisioning, multi-hour deployments).
 Solution:
@@ -36,7 +36,23 @@ class AnsibleWorkflow:
                 await asyncio.sleep(300)  # Retry after 5 minutes
 ```
 
-#### 2. Dynamic Parallel Execution
+```mermaid
+sequenceDiagram
+    participant User
+    participant Temporal
+    participant Ansible
+    User->>Temporal: Start Workflow
+    Temporal->>Ansible: Run Playbook
+    Ansible-->>Temporal: Progress (50% done)
+    Note over Temporal: Crash occurs
+    Temporal->>Temporal: Resume from checkpoint
+    Temporal->>Ansible: Retry failed tasks
+    Ansible-->>Temporal: Task completed
+    Temporal-->>User: Workflow completed
+```
+
+
+#### Dynamic Parallel Execution
 
 Problem: Ansible’s async is limited—hard to manage 1000s of nodes dynamically.
 Solution:
@@ -50,7 +66,20 @@ async def deploy_vms():
     return sum(results)
 ```
 
-#### 3. Human-in-the-Loop Approvals
+```mermaid
+graph TD
+    A[Start Workflow] --> B[Fetch VM List]
+    B --> C[Fan-Out: Deploy VMs in Parallel]
+    C --> D[Deploy VM 1]
+    C --> E[Deploy VM 2]
+    C --> F[Deploy VM 3]
+    D --> G[Aggregate Results]
+    E --> G
+    F --> G
+    G --> H[Workflow Completed]
+```
+
+#### Human-in-the-Loop Approvals
 
 Problem: Ansible Tower requires manual static approvals.
 Solution:
@@ -68,7 +97,19 @@ class ProdDeploymentWorkflow:
         await run_ansible_playbook("deploy_prod.yml")
 ```
 
-#### 4. Cross-Cloud Orchestration
+```mermaid
+sequenceDiagram
+    participant Workflow
+    participant Slack
+    participant User
+    Workflow->>Slack: Send Approval Request
+    Slack->>User: Notify for Approval
+    User->>Slack: Approve
+    Slack->>Workflow: Signal Approval
+    Workflow->>Workflow: Proceed to Next Step
+```
+
+#### Cross-Cloud Orchestration
 
 Problem: Ansible alone can’t coordinate AWS + Azure + GCP workflows.
 Solution:
@@ -81,7 +122,16 @@ async def migrate_to_aws():
         await run_ansible_playbook("cutover_dns.yml")
 ```
 
-#### 5. Event-Driven Ansible (EDA) on Steroids
+```mermaid
+graph TD
+    A[Start Workflow] --> B[Shutdown Azure Resources]
+    B --> C[Provision AWS Resources]
+    C --> D[Check AWS Health]
+    D --> E[Update DNS]
+    E --> F[Workflow Completed]
+```
+
+#### Event-Driven Ansible (EDA) on Steroids
 
 Problem: Ansible EDA reacts to simple events (e.g., webhooks).
 Solution:
@@ -96,7 +146,19 @@ async def auto_scale_workflow():
             await workflow.sleep(timedelta(minutes=5))  # Cooldown
 ```
 
-#### 6. Stateful Workflows with Recovery
+```mermaid
+sequenceDiagram
+    participant Monitor
+    participant Workflow
+    participant Ansible
+    participant PagerDuty
+    Monitor->>Workflow: CPU > 90% for 5min
+    Workflow->>Ansible: Scale Out
+    Workflow->>PagerDuty: Notify Team
+    Workflow->>Workflow: Cooldown for 5min
+```
+
+#### Stateful Workflows with Recovery
 
 Problem: Ansible has no memory of past runs.
 Solution:
@@ -113,7 +175,20 @@ async def patch_workflow():
         await retry_failed_hosts()  # Only retries what crashed
 ```
 
-#### 7. Time Travel Debugging
+```mermaid
+graph TD
+    A[Start Workflow] --> B[Get Host List]
+    B --> C[Run Playbook on Host 1]
+    B --> D[Run Playbook on Host 2]
+    B --> E[Run Playbook on Host 3]
+    C --> F[Log Failed Host]
+    D --> F
+    E --> F
+    F --> G[Retry Failed Hosts]
+    G --> H[Workflow Completed]
+```
+
+#### Time Travel Debugging
 
 Problem: Debugging Ansible failures is painful.
 Solution:
@@ -122,7 +197,17 @@ Replay workflows exactly (e.g., "See why playbook failed 3 days ago").
 # Temporal UI shows full history + inputs/outputs for every step.
 ```
 
-8. Cross-Tool Chaining
+```mermaid
+sequenceDiagram
+    participant User
+    participant Temporal
+    User->>Temporal: Replay Workflow
+    Temporal->>Temporal: Load History
+    Temporal->>Temporal: Re-execute Steps
+    Temporal-->>User: Show Failure Details
+```
+
+#### Cross-Tool Chaining
 
 Problem: Ansible can’t seamlessly call Terraform + Kubernetes.
 Solution:
@@ -135,7 +220,14 @@ async def deploy_full_stack():
     await run_ansible_playbook("configure_ingress.yml")
 ```
 
-## Dynamic Ansible inventory
+```mermaid
+graph TD
+    A[Start Workflow] --> B[Run Terraform Apply]
+    B --> C[Run Kubectl Apply]
+    C --> D[Run Ansible Playbook]
+    D --> E[Workflow Completed]
+```
+### Dynamic Ansible inventory
 
 Here’s how to create a dynamic Ansible inventory using a Temporal workflow that fetches host data from a CMDB via REST API, ensuring real-time, fault-tolerant infrastructure management:
 ```
@@ -189,8 +281,35 @@ if __name__ == "__main__":
         print(json.dumps(generate_inventory(cmdb_data)))
 ```
 
+```mermaid
+graph TD
+    A[Start Workflow] --> B[Fetch CMDB Data]
+    B --> C[Generate Dynamic Inventory]
+    C --> D[Run Ansible Playbook]
+    D --> E[Workflow Completed]
+```
+
+#### Main use cases
+
+```mermaid
+graph TD
+    A[Use Cases] --> B[Multi-Cloud Deployments]
+    A --> C[Mission-Critical Workflows]
+    A --> D[Self-Healing Infrastructure]
+    B --> E[AWS + Azure + GCP]
+    C --> F[Banking Migrations]
+    D --> G[Auto-Remediation]
+```
+
+
 ---
 
 - Complex multi-cloud deployments
 - Mission-critical workflows (e.g., banking migrations)
 - Self-healing infra (e.g., auto-remediation)
+
+---
+### Terraform
+
+
+
