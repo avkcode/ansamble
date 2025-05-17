@@ -6,6 +6,15 @@
 
 [![Temporal](https://e.radikal.host/2025/05/17/Screenshot-2025-05-17-at-07.52.56.png)](https://radikal.host/i/Ir0Q5K)
 
+```yaml
+ansible_workflows:
+  stage: deploy
+  tags:
+    - shell
+  script:
+    - python3 ansible.py --playbook apt_update.yml
+```
+
 #### 1. Long-Running Workflows with Checkpointing
 
 Problem: Ansible playbooks fail on long-running tasks (e.g., cloud provisioning, multi-hour deployments).
