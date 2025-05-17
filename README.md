@@ -289,6 +289,26 @@ graph TD
     D --> E[Workflow Completed]
 ```
 
+
+#### GitLab
+
+To integrate the Temporal-based Ansible workflow with a **GitLab webhook** , you can configure GitLab to trigger the workflow whenever specific events occur (e.g., a push to a branch, a merge request, or a tag creation).
+
+```mermaid
+sequenceDiagram
+    participant GitLab
+    participant WebhookHandler
+    participant Temporal
+    participant Ansible
+    GitLab->>WebhookHandler: Send webhook payload (Push to main)
+    WebhookHandler->>WebhookHandler: Validate payload
+    WebhookHandler->>Temporal: Trigger workflow
+    Temporal->>Ansible: Execute playbook (apt_update.yml)
+    Ansible-->>Temporal: Playbook completed
+    Temporal-->>WebhookHandler: Workflow completed
+    WebhookHandler-->>GitLab: Acknowledge webhook
+```
+
 #### Main use cases
 
 ```mermaid
