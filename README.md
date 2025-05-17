@@ -1,3 +1,24 @@
+Tabel of contents
+
+[Preface](#preface)
+[Ansible without/with Temporal](#Ansible-without/without-Temporal)
+[Simple Workflow]()
+[Long-Running Workflows with Checkpointing]()
+[Dynamic Parallel Execution]()
+[Human-in-the-Loop Approvals]()
+[Cross-Cloud Orchestration]()
+[Event-Driven Ansible (EDA) on Steroids]()
+[Stateful Workflows with Recovery]()
+[Time Travel Debugging]()
+[Cross-Tool Chaining]()
+[Dynamic Ansible Inventory]()
+[GitLab Integration]()
+[Main Use Cases]()
+[Terraform]()
+[Database Migrations]()
+
+
+
 ## Preface
 
 When it comes to orchestrating complex workflows in hybrid cloud environments, Temporal stands out as one of the best open-source tools available. It doesn’t try to replace tools like Terraform or Ansible but instead complements them by adding a layer of reliability, scalability, and flexibility.
