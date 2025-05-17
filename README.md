@@ -1,8 +1,8 @@
 # Tabel of contents
 
 [Preface](#preface)
-[Ansible without/with Temporal](#Ansible-without/without-Temporal)
-[Simple Workflow]()
+[Ansible without/with Temporal](#ansible-without/without-temporal)
+[Simple Workflow](#simple-workflow)
 [Long-Running Workflows with Checkpointing]()
 [Dynamic Parallel Execution]()
 [Human-in-the-Loop Approvals]()
