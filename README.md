@@ -2,7 +2,9 @@
 
 ### Simple workflow
 
-[![Simple](https://e.radikal.host/2025/05/17/Screenshot-2025-05-17-at-07.41.15.png)](https://radikal.host/i/Ir0JQe)
+[![GitLab](https://e.radikal.host/2025/05/17/Screenshot-2025-05-17-at-07.41.15.png)](https://radikal.host/i/Ir0JQe)
+
+[![Temporal](https://e.radikal.host/2025/05/17/Screenshot-2025-05-17-at-07.52.56.png)](https://radikal.host/i/Ir0Q5K)
 
 #### 1. Long-Running Workflows with Checkpointing
 
