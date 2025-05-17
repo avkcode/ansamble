@@ -233,8 +233,6 @@ tctl workflow show -w ansible-1dcbe2e1-8b10-4616-8e11-948cb81d83b1
 Temporal UI simplifies workflow management by providing an intuitive interface to check statuses, inspect details, and take actions like canceling workflows when necessary.
 [![Temporal](https://e.radikal.host/2025/05/17/Screenshot-2025-05-17-at-07.52.56.png)](https://radikal.host/i/Ir0Q5K)
 
-[![GitLab](https://e.radikal.host/2025/05/17/Screenshot-2025-05-17-at-13.26.31.png)](https://radikal.host/i/IGWUQg)
-
 This GitLab pipeline job, ansible_workflows, automates the execution of an Ansible playbook like apt_update.yml to update system packages. It runs in the deploy stage using a shell executor and triggers a Python script (ansible.py) that orchestrates the playbook via Temporal.
 
 The script uses Temporal to run the playbook reliably, with features like retries and live output streaming. If the playbook fails, the pipeline reflects the error for easy debugging. This setup integrates infrastructure updates into your CI/CD process, ensuring reliable and automated deployments.
@@ -247,6 +245,9 @@ ansible_workflows:
   script:
     - python3 ansible.py --playbook apt_update.yml
 ```
+
+[![GitLab](https://e.radikal.host/2025/05/17/Screenshot-2025-05-17-at-13.26.31.png)](https://radikal.host/i/IGWUQg)
+
 
 #### Long-Running Workflows with Checkpointing
 
